@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<configEntity xmlns="http://www.ericsson.com/oss/itpf/deployment/dst/descriptor">
+    <description>eric-enmsg-ext-app-launch-enabler</description>
+    <singleton>true</singleton>
+    <scaleUnit>
+        <minimumUnit>
+            <profile>
+                <cpuCores>1</cpuCores>
+                <cpuMinutes>0</cpuMinutes>
+                <peakCpuMinutes>0</peakCpuMinutes>
+                <memory>2048</memory>
+                <!-- value in MB -->
+            </profile>
+            <profileConversionFormulae>
+                <cpuCores>0</cpuCores>
+                <cpuMinutes>0</cpuMinutes>
+                <peakCpuMinutes>0</peakCpuMinutes>
+                <memory>IF(OR(enm_deployment_type="Small_CloudNative_ENM",enm_deployment_type="Extra_Large_CloudNative_ENM"),2048,0)</memory>
+            </profileConversionFormulae>
+        </minimumUnit>
+        <optimalUnit>
+            <profile>
+                <cpuCores>1</cpuCores>
+                <cpuMinutes>0</cpuMinutes>
+                <peakCpuMinutes>0</peakCpuMinutes>
+                <memory>2048</memory>
+            </profile>
+            <profileConversionFormulae>
+                <cpuCores>0</cpuCores>
+                <cpuMinutes>0</cpuMinutes>
+                <peakCpuMinutes>0</peakCpuMinutes>
+                <memory>IF(OR(enm_deployment_type="Small_CloudNative_ENM",enm_deployment_type="Extra_Large_CloudNative_ENM"),2048,0)</memory>
+            </profileConversionFormulae>
+        </optimalUnit>
+    </scaleUnit>
+</configEntity>

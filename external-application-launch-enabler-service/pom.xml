@@ -1,0 +1,259 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.ericsson.nms</groupId>
+        <artifactId>integration</artifactId>
+        <version>15.2.0.36</version>
+    </parent>
+    <groupId>com.ericsson.oss.services.eale</groupId>
+    <artifactId>external-application-launch-enabler-service</artifactId>
+    <version>1.0.1-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <url>http://www.ericsson.com</url>
+    <organization>
+        <name>Ericsson</name>
+    </organization>
+
+    <prerequisites>
+        <maven>3.0.3</maven>
+    </prerequisites>
+
+    <name>[${project.artifactId}] JEE8 Project</name>
+
+    <properties>
+        <!-- Do not use JBoss community version, use EAP version. The property values of the "jboss_managed_local" profile 
+            in testsuite/jee need to be updated, when this JBoss version is changed. -->
+        <version.jboss.as>7.2.8.1</version.jboss.as>
+
+        <!-- When you want to switch to new Service Framework version only change value below. -->
+        <version.service.framework>4.62.3</version.service.framework>
+
+        <!-- Version of Model Service BOM. Annotation Processor and Model-Deployment-Tool need to be explicitly defined as 
+            they are required in build phase. Be sure to always have alignment between each version below. If the BOM version changes, 
+            the Annotation Processor / Model-Deployment-Tool versions may have to change as well. See Modeling BOM in confluence page 
+            for the correct versions to use. -->
+        <version.modeling.bom>21.4.2</version.modeling.bom>
+        <version.modeling.annotation.processor>3.39.4</version.modeling.annotation.processor>
+        <version.model.deployment.tool>9.16.3</version.model.deployment.tool>
+
+        <version.weld>3.0.5.Final</version.weld>
+        <version.ejb>3.1</version.ejb>
+        <version.jee>8</version.jee>
+        <version.mockito>1.9.5</version.mockito>
+        <version.wiremock>2.6.0</version.wiremock>
+        <version.junit>4.12</version.junit>
+        <version.consul-api-client>1.4.1</version.consul-api-client>
+        <version.jackson-dataformat-xml>2.15.2</version.jackson-dataformat-xml>
+        <version.commons-lang3>3.12.0</version.commons-lang3>
+        <version.commons-io>2.13.0</version.commons-io>
+        <version.resteasy>3.6.1.Final</version.resteasy>
+
+        <version.jboss.as.arquillian>7.2.0.Final</version.jboss.as.arquillian>
+        <version.wildfly-arquillian-container>2.1.1.Final</version.wildfly-arquillian-container>
+        <version.arquillian.bom>1.2.0.Final</version.arquillian.bom>
+        <version.arquillian-weld-se-embedded>1.0.0.CR8</version.arquillian-weld-se-embedded>
+
+        <project.ear.defaultLibBundleDir>lib</project.ear.defaultLibBundleDir>
+
+        <!-- JBoss modules your service will automatically add to classpath -->
+        <project.ear.Dependencies>org.slf4j</project.ear.Dependencies>
+
+        <!-- Zip files for integration test dependencies, when updating the sfwk and model service versions, check for compatibility between them-->
+        <version.sfwk.zip>4.56.2</version.sfwk.zip>
+        <version.sfwk.major>4</version.sfwk.major>
+        <version.model.service.api.module>12.9.2</version.model.service.api.module>
+        <version.model.service.module>13.15.5</version.model.service.module>
+        <url.sfwk>https://arm1s11-eiffel004.eiffel.gic.ericsson.se:8443/nexus/content/repositories/releases/com/ericsson/oss/itpf/sdk/service-framework-bundle/${version.sfwk.zip}/service-framework-bundle-${version.sfwk.zip}.zip</url.sfwk>
+        <url.model.service.api>https://arm1s11-eiffel004.eiffel.gic.ericsson.se:8443/nexus/content/repositories/releases/com/ericsson/oss/itpf/modeling/model-service-api-module/${version.model.service.api.module}/model-service-api-module-${version.model.service.api.module}-package.zip</url.model.service.api>
+        <url.model.service.module>https://arm1s11-eiffel004.eiffel.gic.ericsson.se:8443/nexus/content/repositories/releases/com/ericsson/oss/itpf/modeling/model-service-module/${version.model.service.module}/model-service-module-${version.model.service.module}-package.zip</url.model.service.module>
+
+        <!-- Integration test dependencies-->
+        <version.integration.junit.jupiter>5.8.1</version.integration.junit.jupiter>
+        <version.integration.rest.assured>5.3.1</version.integration.rest.assured>
+        <version.integration.slf4j.simple>1.7.32</version.integration.slf4j.simple>
+        <version.integration.sdk.security.access.control.non.cdi>4.0.17</version.integration.sdk.security.access.control.non.cdi>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- ServiceFrameworkJBossBOM only imports the Service Framework API modules.
+                No Service Framework implementation module is imported with this BOM. -->
+            <dependency>
+                <groupId>com.ericsson.oss.itpf.sdk</groupId>
+                <artifactId>ServiceFrameworkJBossBOM</artifactId>
+                <version>${version.service.framework}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <!-- Model Service BOM. It is required by Service Framework, and for anyone who is using Model Service. Do not 
+                remove it. -->
+            <dependency>
+                <groupId>com.ericsson.oss.itpf.modeling</groupId>
+                <artifactId>Modeling-BOM</artifactId>
+                <version>${version.modeling.bom}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <!-- Arquillian BOM. It is used in JEE/JEE Cluster integration tests. -->
+            <dependency>
+                <groupId>org.jboss.arquillian</groupId>
+                <artifactId>arquillian-bom</artifactId>
+                <version>${version.arquillian.bom}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>${version.junit}</version>
+            <scope>test</scope>
+        </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <!-- The dependency is needed when "JSR-330: Dependency Injection" is used (e.g. @Inject, @Qualifier etc.) -->
+        <dependency>
+            <groupId>javax.inject</groupId>
+            <artifactId>javax.inject</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- The dependency is needed when CDI (Contexts and Dependency Injection) is used. -->
+        <dependency>
+            <groupId>javax.enterprise</groupId>
+            <artifactId>cdi-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- Dependency for Bean validation -->
+        <dependency>
+            <groupId>javax.validation</groupId>
+            <artifactId>validation-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- Dependency for SLF4J logging -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- Dependency for mocking in Unit tests -->
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-all</artifactId>
+            <version>${version.mockito}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+         <modules>
+
+               <module>external-application-launch-enabler-service-api</module>
+               <module>external-application-launch-enabler-service-ear</module>
+               <module>external-application-launch-enabler-service-ejb</module>
+               <module>external-application-launch-enabler-service-jar</module>
+               <module>external-application-launch-enabler-service-war</module>
+               <module>integration-tests</module>
+
+         </modules>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven 
+                    build itself. -->
+                <plugin>
+                    <groupId>org.eclipse.m2e</groupId>
+                    <artifactId>lifecycle-mapping</artifactId>
+                    <version>1.0.0</version>
+                    <configuration>
+                        <lifecycleMappingMetadata>
+                            <pluginExecutions>
+                                <pluginExecution>
+                                    <pluginExecutionFilter>
+                                        <groupId>org.apache.maven.plugins</groupId>
+                                        <artifactId>maven-dependency-plugin</artifactId>
+                                        <versionRange>[2.4,)</versionRange>
+                                        <goals>
+                                            <goal>analyze-dep-mgt</goal>
+                                        </goals>
+                                    </pluginExecutionFilter>
+                                    <action>
+                                        <ignore />
+                                    </action>
+                                </pluginExecution>
+                                <pluginExecution>
+                                    <pluginExecutionFilter>
+                                        <groupId>org.apache.maven.plugins</groupId>
+                                        <artifactId>maven-ear-plugin</artifactId>
+                                        <versionRange>[2.7,)</versionRange>
+                                        <goals>
+                                            <goal>generate-application-xml</goal>
+                                        </goals>
+                                    </pluginExecutionFilter>
+                                    <action>
+                                        <ignore />
+                                    </action>
+                                </pluginExecution>
+                                <pluginExecution>
+                                    <pluginExecutionFilter>
+                                        <groupId>com.ericsson.maven.plugins</groupId>
+                                        <artifactId>rstate-maven-plugin</artifactId>
+                                        <versionRange>[1.0,)</versionRange>
+                                        <goals>
+                                            <goal>rstate</goal>
+                                        </goals>
+                                    </pluginExecutionFilter>
+                                    <action>
+                                        <ignore />
+                                    </action>
+                                </pluginExecution>
+                                <pluginExecution>
+                                    <pluginExecutionFilter>
+                                        <groupId>org.apache.maven.plugins</groupId>
+                                        <artifactId>maven-enforcer-plugin</artifactId>
+                                        <versionRange>[1.1,)</versionRange>
+                                        <goals>
+                                            <goal>enforce</goal>
+                                        </goals>
+                                    </pluginExecutionFilter>
+                                    <action>
+                                        <ignore />
+                                    </action>
+                                </pluginExecution>
+                                <pluginExecution>
+                                    <pluginExecutionFilter>
+                                        <groupId>org.codehaus.mojo</groupId>
+                                        <artifactId>build-helper-maven-plugin</artifactId>
+                                        <versionRange>[1.7,)</versionRange>
+                                        <goals>
+                                            <goal>regex-property</goal>
+                                        </goals>
+                                    </pluginExecutionFilter>
+                                    <action>
+                                        <ignore />
+                                    </action>
+                                </pluginExecution>
+                            </pluginExecutions>
+                        </lifecycleMappingMetadata>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+        <plugins>
+            <plugin>
+                <groupId>org.jboss.as.plugins</groupId>
+                <artifactId>jboss-as-maven-plugin</artifactId>
+                <configuration>
+                    <filename>${project.parent.artifactId}.${project.packaging}</filename>
+                    <skip>false</skip>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

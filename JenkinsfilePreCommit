@@ -1,0 +1,274 @@
+#!/usr/bin/env groovy
+
+/* IMPORTANT:
+ *
+ * In order to make this pipeline work, the following configuration on Jenkins is required:
+ * - slave with a specific label (see pipeline.agent.label below)
+ * - credentials plugin should be installed and have the secrets with the following names:
+ *   + lciadm100credentials (token to access Artifactory)
+ */
+
+def defaultBobImage = 'armdocker.rnd.ericsson.se/sandbox/adp-staging/adp-cicd/bob.2.0:1.5.2-0'
+def bob = new BobCommand()
+        .bobImage(defaultBobImage)
+        .envVars([ISO_VERSION: '${ISO_VERSION}'])
+        .needDockerSocket(true)
+        .toString()
+def failedStage = ''
+
+@Library('ci-pipeline-lib') _
+pipeline {
+    agent {
+        label 'Cloud-Native'
+    }
+    parameters {
+        string(name: 'ISO_VERSION', defaultValue: '0.0.0', description: 'The ENM ISO version (e.g. 1.65.77)')
+    }
+    stages {
+        stage('Inject Credential Files') {
+            steps {
+                withCredentials([file(credentialsId: 'lciadm100-docker-auth', variable: 'dockerConfig')]) {
+                    sh "install -m 600 ${dockerConfig} ${HOME}/.docker/config.json"
+                }
+            }
+        }
+        stage('Checkout Cloud-Native SG Git Repository') {
+            steps {
+                script {
+                    if (env.GERRIT_CHANGE_NUMBER) {
+                        checkout changelog: true, \
+                        scm: [$class: 'GitSCM', \
+                        branches: [[name: "$GERRIT_REFSPEC"]], \
+                        doGenerateSubmoduleConfigurations: false, \
+                        extensions: [[$class: 'BuildChooserSetting', buildChooser: [$class: 'GerritTriggerBuildChooser']]], \
+                        submoduleCfg: [], \
+                        userRemoteConfigs: [[refspec: "${GERRIT_REFSPEC}", \
+                        url: "${GERRIT_MIRROR}/${GERRIT_PROJECT}"]]]
+                    } else {
+                        println "No GERRIT_CHANGE_NUMBER"
+                        git changelog: true, poll: false, url: '${GERRIT_MIRROR}/${REPO}'
+                    }
+                }
+            }
+        }
+        stage('Helm Dep Up ') {
+            steps {
+                sh "${bob} helm-dep-up"
+            }
+            post {
+                failure {
+                    script {
+                        failedStage = env.STAGE_NAME
+                    }
+                }
+            }
+        }
+        stage('Merge values files') {
+            steps{
+                script {
+                    appconfig_values = sh (script: "ls ${WORKSPACE}/chart/eric-enmsg-ext-app-launch-enabler/appconfig/ | grep values.yaml", returnStatus: true)
+                    if (appconfig_values == 0) {
+                        sh("${bob} merge-values-files-with-appconfig")
+                    } else {
+                        sh("${bob} merge-values-files")
+                    }
+                    sh '''
+                         if git status | grep 'values.yaml' > /dev/null; then
+                            git add chart/eric-enmsg-ext-app-launch-enabler/values.yaml
+                            git commit -m "NO JIRA - Merging Values.yaml file with common library values.yaml"
+                         fi
+                     '''
+                }
+            }
+            post {
+                failure {
+                    script {
+                        failedStage = env.STAGE_NAME
+                    }
+                }
+            }
+        }
+
+         stage('Helm Lint') {
+            steps {
+                sh "${bob} lint-helm"
+            }
+            post {
+                failure {
+                    script {
+                        failedStage = env.STAGE_NAME
+                    }
+                }
+            }
+        }
+        stage('Linting Dockerfile') {
+            steps {
+                sh "${bob} lint-dockerfile"
+                archiveArtifacts '*dockerfilelint.log'
+            }
+            post {
+                failure {
+                    script {
+                        failedStage = env.STAGE_NAME
+                    }
+                }
+            }
+        }
+        stage('Generate new version') {
+            steps {
+                script {
+                    sh "${bob} -r ruleset2.0.yaml generate-new-version"
+                    env.IMAGE_VERS = sh(script: "cat .bob/var.version", returnStdout:true).trim()
+                    echo "this is the reference image version to be used for Maven artifacts version"
+                    echo "${IMAGE_VERS}"
+                }
+            }
+            post {
+                failure {
+                    script {
+                        failedStage = env.STAGE_NAME
+                        sh "${bob} -r ruleset2.0.yaml remove-image-with-all-tags"
+                    }
+                }
+            }
+        }
+        stage('Build ENM code with cENM versioning') {
+           steps {
+              withMaven(jdk: env.JDK_HOME, maven: env.MVN_HOME, options: [junitPublisher(healthScaleFactor: 1.0),artifactsPublisher(disabled: true)]) {
+                  sh "cd ${ENM_FOLDER};mvn versions:set -DnewVersion=${IMAGE_VERS}-SNAPSHOT -DgenerateBackupPoms=false; mvn -V -U jacoco:prepare-agent clean install jacoco:report pmd:pmd"
+              }
+           }
+            post {
+                failure {
+                    script {
+                        failedStage = env.STAGE_NAME
+                        sh "${bob} -r ruleset2.0.yaml remove-image-with-all-tags"
+                    }
+                }
+            }
+        }
+        stage('Sonar Analysis') {
+            when {
+                environment name: 'SKIP_SONAR_GLOBAL', value: 'false'
+            }
+            steps {
+                script {
+                   String input = "${ENM_FOLDER}"
+                   String dirsubfolder = input.substring(1, input.length() - 1)
+                   dir (dirsubfolder) {
+                    ci_pcr_init()
+                    ci_pcr_sonar_analysis()
+                   }
+                }
+            }
+            post {
+                failure {
+                    script {
+                        failedStage = env.STAGE_NAME
+                        sh "${bob} -r ruleset2.0.yaml remove-image-with-all-tags"
+                    }
+                }
+            }
+        }
+        stage('Quality Gate') {
+            when {
+                environment name: 'SKIP_SONAR_GLOBAL', value: 'false'
+            }
+            steps {
+                script {
+                    String input = "${ENM_FOLDER}"
+                    String dirsubfolder = input.substring(1, input.length() -1)
+                    dir (dirsubfolder)  {
+                       ci_pcr_get_qualitygate()
+                    }
+                }
+            }
+            post {
+                failure {
+                    script {
+                        failedStage = env.STAGE_NAME
+                        sh "${bob} -r ruleset2.0.yaml remove-image-with-all-tags"
+                    }
+                }
+            }
+        }
+        stage('Build Image and Chart') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'artifactory-seli-api-token-id', usernameVariable: 'ARM_USER', passwordVariable: 'ARM_TOKEN')]) {
+                    sh "${bob} -r ruleset2.0.yaml build-helm build-image-with-all-tags-internal"
+                }
+            }
+            post {
+                failure {
+                    script {
+                        failedStage = env.STAGE_NAME
+                        sh "${bob} -r ruleset2.0.yaml remove-image-with-all-tags-internal"
+                    }
+                }
+            }
+        }
+        stage('Publish Images to Artifactory') {
+            steps {
+                sh "${bob} -r ruleset2.0.yaml push-image-with-all-tags-internal"
+            }
+            post {
+                failure {
+                    script {
+                        failedStage = env.STAGE_NAME
+                        sh "${bob} -r ruleset2.0.yaml remove-image-with-all-tags-internal"
+                    }
+                }
+                always {
+                    sh "${bob} -r ruleset2.0.yaml remove-image-with-all-tags-internal"
+                }
+            }
+        }
+       }
+        post {
+        failure {
+            sh '''
+                set +x
+             '''
+         }
+    }
+}
+
+// More about @Builder: http://mrhaki.blogspot.com/2014/05/groovy-goodness-use-builder-ast.html
+import groovy.transform.builder.Builder
+import groovy.transform.builder.SimpleStrategy
+
+@Builder(builderStrategy = SimpleStrategy, prefix = '')
+class BobCommand {
+    def bobImage = 'bob.2.0:latest'
+    def envVars = [:]
+    def needDockerSocket = false
+
+    String toString() {
+        def env = envVars
+                .collect({ entry -> "-e ${entry.key}=\"${entry.value}\"" })
+                .join(' ')
+
+        def cmd = """\
+            |docker run
+            |--init
+            |--rm
+            |--workdir \${PWD}
+            |--user \$(id -u):\$(id -g)
+            |-v \${PWD}:\${PWD}
+            |-v /home/enmadm100/doc_push/group:/etc/group:ro
+            |-v /home/enmadm100/doc_push/passwd:/etc/passwd:ro
+            |-v \${HOME}/.m2:\${HOME}/.m2
+            |-v \${HOME}/.docker:\${HOME}/.docker
+            |${needDockerSocket ? '-v /var/run/docker.sock:/var/run/docker.sock' : ''}
+            |${env}
+            |\$(for group in \$(id -G); do printf ' --group-add %s' "\$group"; done)
+            |--group-add \$(stat -c '%g' /var/run/docker.sock)
+            |${bobImage}
+            |"""
+        return cmd
+                .stripMargin()           // remove indentation
+                .replace('\n', ' ')      // join lines
+                .replaceAll(/[ ]+/, ' ') // replace multiple spaces by one
+    }
+}
+      

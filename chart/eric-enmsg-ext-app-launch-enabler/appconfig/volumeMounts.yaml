@@ -1,0 +1,6 @@
+- name: gp
+  mountPath: /gp
+- name: dumps
+  mountPath: /ericsson/enm/dumps
+- name: data
+  mountPath: /ericsson/tor/data

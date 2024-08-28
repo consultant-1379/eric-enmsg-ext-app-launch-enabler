@@ -1,0 +1,7 @@
+- backend:
+    service:
+      name: ext-app-launch-enabler
+      port:
+        number: 443
+  path: /eale/
+  pathType: ImplementationSpecific

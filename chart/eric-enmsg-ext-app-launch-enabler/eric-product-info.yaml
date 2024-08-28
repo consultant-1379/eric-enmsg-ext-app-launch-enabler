@@ -1,0 +1,10 @@
+productName: "eric-enmsg-ext-app-launch-enabler"
+productNumber: "CXC 999 9999"
+images:
+  eric-enmsg-ext-app-launch-enabler:
+    productName: "A Helm chart for ext app launch enabler"
+    productNumber: ""
+    name: "eric-enmsg-ext-app-launch-enabler"
+    registry: "armdocker.rnd.ericsson.se"
+    repoPath: "proj-enm"
+    tag: "IMAGE_TAG"

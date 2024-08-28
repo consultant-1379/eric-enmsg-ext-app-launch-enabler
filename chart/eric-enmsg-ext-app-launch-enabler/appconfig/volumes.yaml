@@ -1,0 +1,9 @@
+- name: gp
+  configMap:
+    name: gpextapplaunchenabler
+- name: dumps
+  persistentVolumeClaim:
+    claimName: hcdumps
+- name: data
+  persistentVolumeClaim:
+    claimName: data

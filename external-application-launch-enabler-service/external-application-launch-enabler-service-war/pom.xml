@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<artifactId>external-application-launch-enabler-service</artifactId>
+		<groupId>com.ericsson.oss.services.eale</groupId>
+		<version>1.0.1-SNAPSHOT</version>
+	</parent>
+	<artifactId>external-application-launch-enabler-service-war</artifactId>
+	<packaging>war</packaging>
+
+	<name>[${project.parent.artifactId}] WAR module</name>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-war-plugin</artifactId>
+				<version>3.3.2</version>
+				<configuration>
+					<warName>eale</warName>
+					<failOnMissingWebXml>false</failOnMissingWebXml>
+					<webappDirectory>target/${project.parent.artifactId}-${project.version}</webappDirectory>
+					<resource>
+						<directory>${basedir}/src/main/webapp/WEB-INF</directory>
+						<filtering>true</filtering>
+						<targetPath>WEB-INF</targetPath>
+						<includes>
+							<include>*.xml</include>
+						</includes>
+					</resource>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.jboss.as.plugins</groupId>
+				<artifactId>jboss-as-maven-plugin</artifactId>
+				<configuration>
+					<skip>true</skip>
+				</configuration>
+			</plugin>
+		</plugins>
+	</build>
+
+	<dependencies>
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>${project.parent.artifactId}-api</artifactId>
+			<version>${project.version}</version>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>${project.parent.artifactId}-ejb</artifactId>
+			<version>${project.version}</version>
+			<type>ejb</type>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>${project.parent.artifactId}-jar</artifactId>
+			<version>${project.version}</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<!-- Basic dependency for JEE Web applications, as defined in Java EE Web Specification APIs -->
+		<dependency>
+			<groupId>org.jboss.resteasy</groupId>
+			<artifactId>resteasy-jaxrs</artifactId>
+			<version>${version.resteasy}</version>
+			<scope>provided</scope>
+		</dependency>
+
+		<!-- Dependencies to Service Framework API modules (like sdk-xxx-api) can be added here for compilation purpose only.
+            Only add those Service Framework API dependencies which are used in this project module, and they must be marked as "provided"
+            scope. -->
+		<!-- Dependencies to Service Framework implementation modules (like sdk-xxx) must not be added here. -->
+		<dependency>
+			<groupId>com.ericsson.oss.itpf.sdk</groupId>
+			<artifactId>sdk-security-accesscontrol-api</artifactId>
+			<scope>provided</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>com.fasterxml.jackson.dataformat</groupId>
+			<artifactId>jackson-dataformat-xml</artifactId>
+			<version>${version.jackson-dataformat-xml}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-lang3</artifactId>
+			<version>${version.commons-lang3}</version>
+		</dependency>
+
+		<dependency>
+			<groupId>junit</groupId>
+			<artifactId>junit</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.mockito</groupId>
+			<artifactId>mockito-all</artifactId>
+			<version>${version.mockito}</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>org.glassfish.jersey.core</groupId>
+			<artifactId>jersey-common</artifactId>
+			<version>2.22.2</version>
+			<scope>test</scope>
+		</dependency>
+
+		<dependency>
+			<groupId>com.ericsson.oss.itpf.sdk</groupId>
+			<artifactId>sdk-recording-api</artifactId>
+			<!-- no need to specify version if imported Service Framework BOM -->
+		</dependency>
+	</dependencies>
+</project>
